@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadState() {
-  const saved = localStorage.getItem('worldCupState2026_v2');
+  const saved = localStorage.getItem('worldCupState2026_v6');
   if (saved) {
     appState = JSON.parse(saved);
   } else {
@@ -22,7 +22,7 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem('worldCupState2026_v2', JSON.stringify(appState));
+  localStorage.setItem('worldCupState2026_v6', JSON.stringify(appState));
 }
 
 function renderAll() {
@@ -38,12 +38,13 @@ function calculateStandings() {
     group.teams.forEach(team => {
       team.played = 0; team.won = 0; team.drawn = 0; team.lost = 0;
       team.goalsFor = 0; team.goalsAgainst = 0; team.points = 0;
+      team.status = 'dispute';
     });
   });
 
   // Calculate from saved matches
   appState.matches.forEach(match => {
-    if (match.score1 !== null && match.score2 !== null) {
+    if (match.score1 !== null && match.score2 !== null && match.score1 !== '' && match.score2 !== '') {
       const group = appState.groups.find(g => g.name === match.groupId);
       if (!group) return;
       
@@ -70,6 +71,29 @@ function calculateStandings() {
         t1.points += 1; t2.points += 1;
       }
     }
+  });
+
+  // Calculate Mathematical Status
+  appState.groups.forEach(group => {
+    // Sort teams to find positions
+    const sorted = [...group.teams].sort((a, b) => b.points - a.points);
+    
+    group.teams.forEach(team => {
+      const maxPossiblePoints = team.points + ((3 - team.played) * 3);
+      
+      if (team.points >= 6) {
+        // Historically and mathematically, 6 points guarantees at least a Top 3 advancing spot
+        team.status = 'qualified';
+      } else if (team.played >= 2 && team.points === 0) {
+        // 0 points after 2 games virtually eliminates a team due to goal difference and 3rd place cutoffs
+        team.status = 'eliminated';
+      } else if (team.played === 3 && maxPossiblePoints < sorted[2].points) {
+        // Strict math: if all games played and points less than 3rd place
+        team.status = 'eliminated';
+      } else {
+        team.status = 'dispute';
+      }
+    });
   });
 }
 
@@ -108,16 +132,26 @@ function renderGroups() {
     
     let tableRows = '';
     sortedTeams.forEach((team, index) => {
-      const isAdvancing = index < 2;
-      const rowStyle = isAdvancing ? 'background: rgba(0, 242, 254, 0.05);' : '';
-      const posColor = isAdvancing ? 'color: var(--primary-color); font-weight: bold;' : '';
+      let statusBadge = '';
+      let rowClass = '';
       
+      if (team.status === 'qualified') {
+        statusBadge = '<span class="badge badge-qualified">CLASIFICADO</span>';
+        rowClass = 'row-qualified';
+      } else if (team.status === 'eliminated') {
+        statusBadge = '<span class="badge badge-eliminated">ELIMINADO</span>';
+        rowClass = 'row-eliminated';
+      } else {
+        statusBadge = '<span class="badge badge-dispute">EN DISPUTA</span>';
+      }
+
       tableRows += `
-        <tr style="${rowStyle}">
-          <td style="${posColor}">${index + 1}</td>
+        <tr class="${rowClass}">
+          <td>${index + 1}</td>
           <td class="team-col">
             <span class="flag">${team.flag}</span>
             <span>${team.name}</span>
+            ${statusBadge}
           </td>
           <td>${team.played}</td>
           <td>${team.goalsFor - team.goalsAgainst}</td>
@@ -183,7 +217,7 @@ function renderMatches() {
         </div>
       </div>
       <div class="match-actions">
-        <button class="save-btn" data-id="${match.id}">${match.score1 !== null ? 'Saved ✓' : 'Save Score'}</button>
+        <button class="save-btn ${match.score1 !== null ? 'saved' : ''}" data-id="${match.id}">${match.score1 !== null ? 'Saved ✓' : 'Save Score'}</button>
       </div>
     `;
 
@@ -199,7 +233,7 @@ function renderMatches() {
       const score2Val = card.querySelector('.score2').value;
 
       if (score1Val === '' || score2Val === '') {
-        alert('Please enter scores for both teams.');
+        alert('Please enter valid scores for both teams.');
         return;
       }
 
@@ -226,7 +260,7 @@ function renderBracket() {
   
   // Check if all matches are played
   const totalMatches = appState.matches.length;
-  const playedMatches = appState.matches.filter(m => m.score1 !== null && m.score2 !== null).length;
+  const playedMatches = appState.matches.filter(m => m.score1 !== null && m.score2 !== null && m.score1 !== '' && m.score2 !== '').length;
   
   if (playedMatches < totalMatches) {
     container.innerHTML = `

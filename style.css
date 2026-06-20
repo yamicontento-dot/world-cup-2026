@@ -245,6 +245,43 @@ h1 span {
   color: var(--primary-color);
 }
 
+/* Status Badges */
+.badge {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.badge-qualified {
+  background: rgba(0, 230, 118, 0.2);
+  color: var(--win-color);
+  border: 1px solid rgba(0, 230, 118, 0.5);
+}
+
+.badge-eliminated {
+  background: rgba(255, 23, 68, 0.2);
+  color: var(--loss-color);
+  border: 1px solid rgba(255, 23, 68, 0.5);
+}
+
+.badge-dispute {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.row-qualified {
+  background: linear-gradient(90deg, rgba(0, 230, 118, 0.05), transparent);
+}
+
+.row-eliminated {
+  opacity: 0.5;
+  filter: grayscale(80%);
+}
+
 /* Bracket View Placeholder styles */
 .bracket-container {
   text-align: center;
